@@ -1,5 +1,0 @@
-include README.md
-include requirements.txt
-
-recursive-include amzsear/core *
-recursive-include amzsear/cli *
