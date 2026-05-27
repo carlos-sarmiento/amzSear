@@ -29,6 +29,8 @@ class AmzProduct(AmzBase):
         rating (AmzRating): An AmzRating object.
         prices (dict): A dictionary of prices, with the price type as a key and
             a string for the price value (see get_prices method to get float values).
+        availability (str): Best-effort availability text from the search result.
+        is_available (bool): Best-effort stock status from the search result.
         extra_attributes (dict): Any extra information that can be extracted
             from the product.
         subtext (list): A list of strings under the title, typically the author's
@@ -50,6 +52,8 @@ class AmzProduct(AmzBase):
     image_url = None
     rating = None
     prices = None
+    availability = None
+    is_available = None
     extra_attributes = None
     subtext = None
     details = None  # AmzProductDetails object (populated by fetch_details)
@@ -57,6 +61,7 @@ class AmzProduct(AmzBase):
     _fetch_error = None  # Error message if fetch_details failed
 
     _all_attrs = ['title','product_url','image_url','rating','prices',
+        'availability', 'is_available',
         'extra_attributes', 'subtext', 'details', 'reviews']
 
     def __init__(self, html_element=None, region=DEFAULT_REGION):
@@ -106,6 +111,12 @@ class AmzProduct(AmzBase):
                 price_key = price_names[i].text
             d['prices'][price_key] = el.text
 
+        availability, is_available = self._get_availability_from_html(root, d['prices'])
+        if availability is not None:
+            d['availability'] = availability
+        if is_available is not None:
+            d['is_available'] = is_available
+
         extras = root.cssselect('div[class="a-fixed-left-grid-inner"] > div > span')
         extras = [re.sub(r'\s+', ' ', x.text_content().strip()) for x in extras]
         d['extra_attributes'] = dict(list(zip(extras,extras[1:]))[::2])
@@ -115,6 +126,44 @@ class AmzProduct(AmzBase):
 
         # clean up before returning
         return dict(map(lambda k: (k, d[k].strip() if isinstance(d[k],str) else d[k]), d)) 
+
+    def _get_availability_from_html(self, root, prices=None):
+        """
+        Parse best-effort availability from a search result card.
+
+        Amazon search cards do not expose a dedicated stock field. Only
+        explicit out-of-stock or in-stock phrases are treated as known.
+        """
+        text = re.sub(r'\s+', ' ', root.text_content()).strip()
+
+        unavailable_patterns = [
+            r'\bcurrently unavailable\b',
+            r'\btemporarily out of stock\b',
+            r'\bout of stock\b',
+            r'\bno featured offers available\b',
+            r'\bcurrently not available\b',
+            r'\bnot available\b',
+            r'\bdiscontinued\b',
+            r'\bsold out\b',
+        ]
+        for pattern in unavailable_patterns:
+            match = re.search(pattern, text, flags=re.IGNORECASE)
+            if match:
+                return match.group(0), False
+
+        available_patterns = [
+            r'\bonly\s+\d+\s+left\s+in stock\b',
+            r'\bin stock\b',
+            r'\bavailable to ship\b',
+            r'\bships from\b',
+            r'\bfree delivery\b',
+        ]
+        for pattern in available_patterns:
+            match = re.search(pattern, text, flags=re.IGNORECASE)
+            if match:
+                return match.group(0), True
+
+        return None, None
 
 
     @requires_valid_data(default=[])
@@ -224,5 +273,3 @@ class AmzProduct(AmzBase):
         #     ...
 
         return self
-
-

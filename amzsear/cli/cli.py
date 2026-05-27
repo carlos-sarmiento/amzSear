@@ -138,6 +138,8 @@ def print_json(cls, verbose=False):
                 'title': product.get('title'),
                 'prices': product.get('prices'),
                 'rating': product.rating.to_dict() if product.rating else None,
+                'availability': product.get('availability'),
+                'is_available': product.get('is_available'),
                 'product_url': product.product_url
             }
         print(json.dumps(data, indent=2))
@@ -166,7 +168,7 @@ def print_verbose(cls):
 
 
 def print_short(cls):
-    fields = ['ASIN','Title','Prices','Rating']
+    fields = ['ASIN','Title','Prices','Rating','Available']
 
     rows = [{f:f for f in fields}]
     for index, product in cls.items():
@@ -190,6 +192,8 @@ def print_short(cls):
         if temp_dict['Rating'] != '-----':
             temp_dict['Rating'] = temp_dict['Rating'].get_star_repr()
 
+        temp_dict['Available'] = format_availability(product)
+
         rows.append(temp_dict)
 
     format_str = []
@@ -200,6 +204,16 @@ def print_short(cls):
 
     for row in rows:
         print(format_str.format(*[row.get(x,'') for x in fields])) # print in order
+
+
+def format_availability(product):
+    """Format best-effort availability for compact CLI output."""
+    is_available = product.get('is_available', default=None)
+    if is_available is True:
+        return 'Yes'
+    if is_available is False:
+        return 'No'
+    return 'Unknown'
 
 
 # Product output formatters
