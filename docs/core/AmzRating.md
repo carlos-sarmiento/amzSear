@@ -1,117 +1,143 @@
 ## Class Definition
+
 <a name="AmzRating"></a>
-#### AmzRating(*html_element=None*):
 
-The AmzRating class extends the [AmzBase](AmzBase.md#AmzBase) class and, as such the following attributes are available to be called as an index call or as an attribute:
+### AmzRating(_html_element=None_)
 
-* *ratings_text* (str): The star rating (e.g. "4.5/5").
-* *ratings_count_text* (str): The number of votes (e.g. "100").
+The AmzRating class extends the [AmzBase](AmzBase.md#AmzBase) class and, as such
+the following attributes are available to be called as an index call or as an
+attribute:
 
-This class should usually not be instantiated directly (rather be used as part of an [AmzProduct](AmzProduct.md) element) but can be created by passing an HTML element to the constructor. If nothing is passed, an empty AmzRating object is created.
+- _ratings_text_ (str): The star rating (e.g. "4.5/5").
+- _ratings_count_text_ (str): The number of votes (e.g. "100").
 
-###### Optional Args:
-*html_element* (LXML root): A root for an HTML tree derived from an element on an Amazon search page.
+This class should usually not be instantiated directly (rather be used as part
+of an [AmzProduct](AmzProduct.md) element) but can be created by passing an HTML
+element to the constructor. If nothing is passed, an empty AmzRating object is
+created.
 
+#### Optional Args
+
+_html_element_ (LXML root): A root for an HTML tree derived from an element on
+an Amazon search page.
 
 ## Class Methods
 
 <a name="get"></a>
-#### get(*key, default=None, raise_error=False*):
+
+### get(_key, default=None, raise_error=False_)
 
 Inherited method from [AmzBase](AmzBase.md#get).
 
-## 
+##
 
 <a name="get_count"></a>
-#### get\_count():
+
+### get_count()
 
 Gets the total number of ratings.
 
-###### Returns:
+#### Returns
+
 int: The number of ratings.
 
-## 
+##
 
 <a name="get_denominator"></a>
-#### get\_denominator():
+
+### get_denominator()
+
 Gets the value the star rating is out of (usually 5).
 
-###### Returns:
+#### Returns
+
 float: The denominator of the star rating.
 
-## 
+##
 
 <a name="get_numerator"></a>
-#### get\_numerator():
+
+### get_numerator()
 
 Gets the value the average value of the star rating (usually between 0 and 5).
 
-###### Returns:
+#### Returns
+
 float: The numerator of the star rating.
 
-## 
+##
 
 <a name="get_perc"></a>
-#### get\_perc():
 
-Gets a percentage value of the rating - 0% being a 0/5 star rating and 100% being a 5/5 star rating.
+### get_perc()
 
-###### Returns:
+Gets a percentage value of the rating - 0% being a 0/5 star rating and 100%
+being a 5/5 star rating.
+
+#### Returns
+
 float: The star percentage.
 
-## 
+##
 
 <a name="get_star_repr"></a>
-#### get\_star\_repr(star_repr='*'):
+
+### get_star_repr(star_repr='\*')
 
 Gives a visual representation of the star rating, rounding to the nearest star.
 
-###### Optional Args:
-*star_repr* (str): A (typically) single character used to represent a star.   
+#### Optional Args
 
-###### Returns:
+_star_repr_ (str): A (typically) single character used to represent a star.
+
+##### Returns
+
 str: A representation of the star rating.
 
-## 
+##
 
 <a name="is_valid"></a>
-#### is\_valid():
+
+### is_valid()
 
 Inherited method from [AmzBase](AmzBase.md#is_valid).
 
-## 
+##
 
 <a name="items"></a>
-#### items():
+
+### items()
 
 Inherited method from [AmzBase](AmzBase.md#items).
 
-## 
+##
 
 <a name="keys"></a>
-#### keys():
+
+### keys()
 
 Inherited method from [AmzBase](AmzBase.md#keys).
 
-## 
+##
 
 <a name="to_dict"></a>
-#### to\_dict(*recursive=True, flatten=False*):
+
+### to_dict(_recursive=True, flatten=False_)
 
 Inherited method from [AmzBase](AmzBase.md#to_dict).
 
-## 
+##
 
 <a name="to_series"></a>
-#### to\_series(*recursive=True, flatten=False*):
+
+### to_series(_recursive=True, flatten=False_)
 
 Inherited method from [AmzBase](AmzBase.md#to_series).
 
-## 
+##
 
 <a name="values"></a>
-#### values():
+
+### values()
 
 Inherited method from [AmzBase](AmzBase.md#values).
-
-

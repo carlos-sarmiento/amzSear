@@ -1,10 +1,11 @@
 # amzSear
 
-The unofficial Amazon Product CLI & API. Easily search the amazon product directory from the command line without the need for an Amazon API key.
+The unofficial Amazon Product CLI & API. Easily search the amazon product
+directory from the command line without the need for an Amazon API key.
 
 Wondering about about an amazon product listing? Find the amzSear!
 
-__Version 2 has been released!__ See [below](#whats-new) for more info.
+**Version 2 has been released!** See [below](#whats-new) for more info.
 
 ```text
 $ amzsear 'Harry Potter Books'
@@ -31,7 +32,8 @@ B01ELVJPJW  Harry Potter and the Cursed Child, Parts One and T  $3.15 - $12.99  
 
 ## Installation
 
-Can easily be be run on Python version 3 or greater with minimal additional dependencies.
+Can easily be be run on Python version 3 or greater with minimal additional
+dependencies.
 
 Install the dependencies and main package using pip.
 
@@ -45,7 +47,11 @@ For those wanting to upgrade to version 2, use the command:
 $ pip install amzsear --upgrade
 ```
 
-Note: The [Pandas](https://pandas.pydata.org/) package is not a required dependency for amzSear, however a few methods do use it (see [AmzSear.md](docs/core/AmzSear.md#to_dataframe), [AmzBase.md](docs/core/AmzBase.md#to_series)) if one wants to integrate with Pandas. If this is the case, pandas should be installed separately using:
+Note: The [Pandas](https://pandas.pydata.org/) package is not a required
+dependency for amzSear, however a few methods do use it (see
+[AmzSear.md](docs/core/AmzSear.md#to_dataframe),
+[AmzBase.md](docs/core/AmzBase.md#to_series)) if one wants to integrate with
+Pandas. If this is the case, pandas should be installed separately using:
 
 ```text
 $ pip install pandas
@@ -59,27 +65,32 @@ AmzSear can be used in two ways, from the command line and as a Python package.
 
 #### CLI
 
-The amzSear CLI allows Amazon search queries to be performed directly from the command line. In it's simplest form, the CLI only requires a query.
+The amzSear CLI allows Amazon search queries to be performed directly from the
+command line. In it's simplest form, the CLI only requires a query.
 
 ```text
 $ amzsear 'Harry Potter Books'
 ```
 
-However, additional options can be set to select the page number, item, region or the output format. For example:
+However, additional options can be set to select the page number, item, region
+or the output format. For example:
 
 ```text
 $ amzsear 'Harry Potter' -p 2 -s B00728DYLA -j
 ```
 
-The above query will display the item with ASIN B00728DYLA on page 2 as a JSON object. The `-s` flag accepts both ASIN and numeric index (0-based position).
+The above query will display the item with ASIN B00728DYLA on page 2 as a JSON
+object. The `-s` flag accepts both ASIN and numeric index (0-based position).
 
-Search results include a best-effort availability signal. The default CLI output shows an
-`Available` column, and JSON output includes `availability` and `is_available` fields.
-Results without explicit availability text are reported as unknown.
+Search results include a best-effort availability signal. The default CLI output
+shows an `Available` column, and JSON output includes `availability` and
+`is_available` fields. Results without explicit availability text are reported
+as unknown.
 
 #### Product Lookup by ASIN
 
-You can also fetch detailed product information directly by ASIN using the `-a/--asin` flag:
+You can also fetch detailed product information directly by ASIN using the
+`-a/--asin` flag:
 
 ```text
 $ amzsear -a B00006IFHD
@@ -100,7 +111,9 @@ About this item (7 points):
 Technical details (21 fields)
 ```
 
-This fetches the product page and extracts detailed information including brand, full title, bullet points, technical specifications, and review statistics. Use `-v` for verbose output or `-j` for JSON format.
+This fetches the product page and extracts detailed information including brand,
+full title, bullet points, technical specifications, and review statistics. Use
+`-v` for verbose output or `-j` for JSON format.
 
 Use `-b/--browser` to open the product page in your default browser:
 
@@ -108,7 +121,8 @@ Use `-b/--browser` to open the product page in your default browser:
 $ amzsear -a B00006IFHD -b
 ```
 
-For more examples and for extended usage information see the [CLI Readme](docs/cli/README.md).
+For more examples and for extended usage information see the
+[CLI Readme](docs/cli/README.md).
 
 #### MCP Server
 
@@ -118,10 +132,10 @@ Run the FastMCP Streamable HTTP server with:
 $ amzsear-mcp --host 127.0.0.1 --port 8765
 ```
 
-The MCP endpoint is `http://127.0.0.1:8765/mcp`. It exposes search, product lookup, review
-lookup, URL building, region listing, and HTML parsing tools through the official Python MCP
-SDK. See the
-[MCP README](docs/mcp/README.md) for the full tool list.
+The MCP endpoint is `http://127.0.0.1:8765/mcp`. It exposes search, product
+lookup, review lookup, URL building, region listing, and HTML parsing tools
+through the official Python MCP SDK. See the [MCP README](docs/mcp/README.md)
+for the full tool list.
 
 #### API
 
@@ -130,7 +144,9 @@ from amzsear import AmzSear
 amz = AmzSear('Harry Potter')
 ```
 
-In the latest version of amzSear dedicated `AmzSear` and `AmzProduct` classes have been created to allow easier extraction of Amazon product information in a Python program. For example:
+In the latest version of amzSear dedicated `AmzSear` and `AmzProduct` classes
+have been created to allow easier extraction of Amazon product information in a
+Python program. For example:
 
 ```python
 >>> from amzsear import AmzSear
@@ -153,7 +169,8 @@ subtext             ['by Sarah-Jane Williams and FlyingKids']
 [8.37, 10.9]
 ```
 
-For a complete explanation of the intricacies of the amzSear core API, see the [API docs](docs/core/).
+For a complete explanation of the intricacies of the amzSear core API, see the
+[API docs](docs/core/).
 
 <a name="whats-new"></a>
 
@@ -165,7 +182,7 @@ For a complete explanation of the intricacies of the amzSear core API, see the [
 | Command line conversion to JSON                                |       | ✓     |
 | Product lookup by ASIN with detailed info                      |       | ✓     |
 | Support for US Amazon                                          | ✓     | ✓     |
-| Support across __all__ Amazon regions                          |       | ✓     |
+| Support across **all** Amazon regions                          |       | ✓     |
 | Single page API queries                                        | ✓     | ✓     |
 | Multiple page API queries                                      |       | ✓     |
 | Dedicated AmzSear class & subclasses                           |       | ✓     |
@@ -176,23 +193,28 @@ For a complete explanation of the intricacies of the amzSear core API, see the [
 
 #### Summary
 
-* Support across all Amazon regions (Australia, India, Spain, UK, US, etc.)
-* Dedicated AmzSear class & subclasses
-* Better scraping & extraction to retrieve all data
-* Additional fields - including image_url, subtitle/subtext, rating's count
-* Product lookup by ASIN - fetch detailed product info (brand, specs, bullet points, reviews)
-* Simpler usability and clearer command line interface
-* JSON export format for programmatic use
+- Support across all Amazon regions (Australia, India, Spain, UK, US, etc.)
+- Dedicated AmzSear class & subclasses
+- Better scraping & extraction to retrieve all data
+- Additional fields - including image_url, subtitle/subtext, rating's count
+- Product lookup by ASIN - fetch detailed product info (brand, specs, bullet
+  points, reviews)
+- Simpler usability and clearer command line interface
+- JSON export format for programmatic use
 
-A more in depth understanding of the latest features of the CLI can be explored in the [CLI Readme](docs/cli/README.md). A complete breakdown of the core API's extended features can be seen in the core [API docs](docs/core/).
+A more in depth understanding of the latest features of the CLI can be explored
+in the [CLI Readme](docs/cli/README.md). A complete breakdown of the core API's
+extended features can be seen in the core [API docs](docs/core/).
 
 ### About
 
 #### Articles
 
-* [OSTechNix](https://www.ostechnix.com/search-amazon-products-command-line/)
-* [CrackWare](http://crackware.me/technology/search-amazon-products-from-command-line/)
-* [Linux-OS.net](http://linux-os.net/amzsear-busca-productos-en-amazon-desde-la-linea-de-comandos/)
-* [MasLinux](http://maslinux.es/buscar-productos-de-amazon-desde-la-linea-de-comandos/)
+- [OSTechNix](https://www.ostechnix.com/search-amazon-products-command-line/)
+- [CrackWare](http://crackware.me/technology/search-amazon-products-from-command-line/)
+- [Linux-OS.net](http://linux-os.net/amzsear-busca-productos-en-amazon-desde-la-linea-de-comandos/)
+- [MasLinux](http://maslinux.es/buscar-productos-de-amazon-desde-la-linea-de-comandos/)
 
-This library was designed to facilitate the use of Amazon search on the command line whilst also providing a utility to easily scrape basic product information from Amazon (for those without access to Amazon's Product API).
+This library was designed to facilitate the use of Amazon search on the command
+line whilst also providing a utility to easily scrape basic product information
+from Amazon (for those without access to Amazon's Product API).
