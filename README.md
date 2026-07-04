@@ -3,36 +3,27 @@
 The unofficial Amazon Product CLI & API. Easily search the amazon product
 directory from the command line without the need for an Amazon API key.
 
-Wondering about about an amazon product listing? Find the amzSear!
+Wondering about an amazon product listing? Find the amzSear!
 
-**Version 2 has been released!** See [below](#whats-new) for more info.
+**Version 3 is the current API.** It uses ASIN keys for products, includes
+direct ASIN lookup, and exposes an MCP server for AI clients.
 
 ```text
 $ amzsear 'Harry Potter Books'
 ```
 
 ```text
-ASIN        Title                                               Prices             Rating
-B01CUKZNM2  Harry Potter Paperback Box Set (Books 1-7)          $21.20 - $52.99    *****
-B00728DYLA  Harry Potter and the Sorcerer's Stone               $0.00 - $10.99     *****
-B00728DYLY  Harry Potter And The Chamber Of Secrets             $0.00 - $10.99     *****
-B00728E75S  Harry Potter And The Goblet Of Fire                 $0.00 - $12.99     *****
-B00728DYCU  Harry Potter and the Prisoner of Azkaban            $0.00 - $10.99     *****
-B00728E6Z4  Harry Potter And The Order Of The Phoenix           $0.00 - $12.99     *****
-B00728DYPE  Harry Potter and the Deathly Hallows (Book 7)       $0.00 - $14.99     *****
-B00728E6G8  Harry Potter and the Half-Blood Prince (Book 6)     $0.00 - $12.99     *****
-B01LTHVLSC  Harry Potter and the Sorcerer's Stone: The Illustr  $9.23 - $39.99     ****
-B01LTHXA3C  Harry Potter Complete Book Series Special Edition   $64.88 - $81.95    *****
-B01ELVJPJW  Harry Potter and the Cursed Child, Parts One and T  $3.15 - $12.99     ****
+ASIN        Title                                               Prices             Rating Available
+B01CUKZNM2  Harry Potter Paperback Box Set (Books 1-7)          $21.20 - $52.99    *****  Unknown
+B00728DYLA  Harry Potter and the Sorcerer's Stone               $0.00 - $10.99     *****  Unknown
+B00728DYLY  Harry Potter And The Chamber Of Secrets             $0.00 - $10.99     *****  Unknown
 ```
-
-![Amazon Comparison Shot](amazon_screenshot.png)
 
 <a name="installation"></a>
 
 ## Installation
 
-Can easily be be run on Python version 3 or greater with minimal additional
+Can easily be run on Python 3.10 or greater with minimal additional
 dependencies.
 
 Install the dependencies and main package using pip.
@@ -41,7 +32,7 @@ Install the dependencies and main package using pip.
 $ pip install amzsear
 ```
 
-For those wanting to upgrade to version 2, use the command:
+To upgrade an existing install, use:
 
 ```text
 $ pip install amzsear --upgrade
@@ -66,7 +57,7 @@ AmzSear can be used in two ways, from the command line and as a Python package.
 #### CLI
 
 The amzSear CLI allows Amazon search queries to be performed directly from the
-command line. In it's simplest form, the CLI only requires a query.
+command line. In its simplest form, the CLI only requires a query.
 
 ```text
 $ amzsear 'Harry Potter Books'
@@ -174,26 +165,23 @@ For a complete explanation of the intricacies of the amzSear core API, see the
 
 <a name="whats-new"></a>
 
-### What's New in Version 2.0
+### What's New in Version 3.x
 
-| Feature                                                        | v 1.0 | v 2.0 |
-| -------------------------------------------------------------- | ----- | ----- |
-| Command line Amazon queries                                    | ✓     | ✓     |
-| Command line conversion to JSON                                |       | ✓     |
-| Product lookup by ASIN with detailed info                      |       | ✓     |
-| Support for US Amazon                                          | ✓     | ✓     |
-| Support across **all** Amazon regions                          |       | ✓     |
-| Single page API queries                                        | ✓     | ✓     |
-| Multiple page API queries                                      |       | ✓     |
-| Dedicated AmzSear class & subclasses                           |       | ✓     |
-| Extraction of (title, url, prices & rating)                    | ✓     | ✓     |
-| Extraction of (image_url, rating's count, extra text, subtext) |       | ✓     |
-| Consistent extraction across Amazon sites                      |       | ✓     |
-| Support for API input from query or url or html directly       |       | ✓     |
+| Feature                                  | v2  | v3  |
+| ---------------------------------------- | --- | --- |
+| Command line Amazon queries              | ✓   | ✓   |
+| JSON output                              | ✓   | ✓   |
+| ASIN-keyed search results                |     | ✓   |
+| Direct product lookup by ASIN            |     | ✓   |
+| Product details and reviews parsing      |     | ✓   |
+| MCP server for AI clients                |     | ✓   |
+| Locale-aware rating, count, price parser |     | ✓   |
+| Offline HTML parsing helpers             | ✓   | ✓   |
 
 #### Summary
 
-- Support across all Amazon regions (Australia, India, Spain, UK, US, etc.)
+- Support across all configured Amazon regions (Australia, India, Spain, UK,
+  US, AE, etc.)
 - Dedicated AmzSear class & subclasses
 - Better scraping & extraction to retrieve all data
 - Additional fields - including image_url, subtitle/subtext, rating's count
@@ -201,6 +189,8 @@ For a complete explanation of the intricacies of the amzSear core API, see the
   points, reviews)
 - Simpler usability and clearer command line interface
 - JSON export format for programmatic use
+- MCP server tools for search, product lookup, reviews, URL building, region
+  listing, and offline HTML parsing
 
 A more in depth understanding of the latest features of the CLI can be explored
 in the [CLI Readme](docs/cli/README.md). A complete breakdown of the core API's

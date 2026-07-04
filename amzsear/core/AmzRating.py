@@ -1,11 +1,6 @@
-import re
-
-try:
-    from amzsear.core.AmzBase import AmzBase
-    from amzsear.core import requires_valid_data, capture_exception
-except ImportError:
-    from .AmzBase import AmzBase
-    from . import requires_valid_data, capture_exception
+from . import capture_exception, requires_valid_data
+from .AmzBase import AmzBase
+from .utils import extract_numbers, round_half_up
 
 
 class AmzRating(AmzBase):
@@ -58,7 +53,9 @@ class AmzRating(AmzBase):
             tuple: Tuple of (ratings_text, ratings_count_text) as strings.
         """
         ratings_text = root.cssselect('i[class*="star"]')[0].text_content()
-        ratings_count_text = root.cssselect('a[href*="customerReviews"]')[0].text_content()
+        ratings_count_text = root.cssselect(
+            'a[href*="customerReviews"], a[href*="product-reviews"]'
+        )[0].text_content()
         return (ratings_text, ratings_count_text)
 
     def _extract_all_values(self, data=None):
@@ -78,7 +75,7 @@ class AmzRating(AmzBase):
             data = self.ratings_text
         if not data:
             return []
-        return [float(re.sub(r'[^\d.]', '', x)) for x in re.findall(r'[\d.,-]+', data)]
+        return extract_numbers(data)
 
     @requires_valid_data(default=0.0)
     def get_perc(self):
@@ -139,4 +136,4 @@ class AmzRating(AmzBase):
         Returns:
             str: A representation of the star rating (e.g., '****' for 4 stars).
         """
-        return star_repr * round(self.get_numerator())
+        return star_repr * round_half_up(self.get_numerator())

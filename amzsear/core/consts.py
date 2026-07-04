@@ -1,7 +1,7 @@
-#Defaults
+# Defaults
 REPR_MAX_LEN_DEFAULT = 90
 
-#URL CODES
+# URL CODES
 REGION_CODES = {
     'AU': '.com.au',
     'AE': '.ae',
@@ -23,16 +23,13 @@ REGION_CODES = {
 
 DEFAULT_REGION = "US"
 
-#URL Building
+# URL Building
 BASE_URL = 'https://www.amazon'
-QUERY_BUILD_DICT = {}
-
-SEARCH_URL = '%s/s/ref=nb_sb_noss?sf=qz&keywords=%s&ie=UTF8&unfiltered=1&page=%s'
+SEARCH_URL = '%s/s?k=%s&page=%s'
 
 # Product detail page URLs
 PRODUCT_URL = '%s/dp/%s'  # BASE_URL + region, ASIN
 REVIEWS_URL = '%s/product-reviews/%s'  # BASE_URL + region, ASIN
-QA_URL = '%s/ask/questions/asin/%s'  # BASE_URL + region, ASIN
 
 # Request headers for all Amazon requests
 # Note: Don't include Accept-Encoding to get uncompressed response

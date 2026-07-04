@@ -1,16 +1,12 @@
 from lxml import html as html_module
 
-try:
-    from amzsear.core import build_url, fetch_html
-    from amzsear.core.consts import DEFAULT_REGION
-    from amzsear.core.AmzProduct import AmzProduct
-except ImportError:
-    from . import build_url, fetch_html
-    from .consts import DEFAULT_REGION
-    from .AmzProduct import AmzProduct
+from . import FetchError, build_url, fetch_html
+from .AmzProduct import AmzProduct
+from .consts import DEFAULT_REGION
+from .utils import validate_positive_int
 
 
-class AmzSear(object):
+class AmzSear:
     """
     The AmzSear object is similar to a Python dict, with each item having a
     unique index (ASIN) to reference each AmzProduct.
@@ -43,7 +39,7 @@ class AmzSear(object):
 
     def __init__(self, query=None, page=1, region=DEFAULT_REGION, url=None, html=None, html_element=None, products=None):
         def get_iter(it):
-            if not hasattr(it, '__iter__') or isinstance(it, str):
+            if not hasattr(it, '__iter__') or isinstance(it, str) or hasattr(it, 'cssselect'):
                 return [it]
             else:
                 return it
@@ -51,44 +47,29 @@ class AmzSear(object):
         self._products = []
         self._indexes = []
         self._urls = []
+        self.fetch_errors = []
+        products = None
 
         if query is not None:
-            page = get_iter(page)
-            url = [build_url(query=query, page_num=p, region=region) for p in page]
-        if url is not None:
-            url = get_iter(url)
-            self._urls = url
-            html_element = []
-            for u in url:
-                elem = fetch_html(build_url(u))
-                if elem is not None:
-                    html_element.append(elem)
-        if html is not None:
-            html = get_iter(html)
-            html_element = [html_module.fromstring(h) for h in html]
-        if html_element is not None:
-            html_element = get_iter(html_element)
-            products = []
-            for html_el in html_element:
-                page_products = html_el.cssselect('div[data-asin][data-component-type="s-search-result"]')
-                page_products = [x for x in page_products if x.cssselect('h2')]
-                page_products = [AmzProduct(elem, region=region) for elem in page_products]
-                products.extend(page_products)
+            pages = [validate_positive_int(p, "page") for p in get_iter(page)]
+            url = [build_url(query=query, page_num=p, region=region) for p in pages]
+            products = self._products_from_urls(url, region)
+        elif url is not None:
+            products = self._products_from_urls(get_iter(url), region)
+        elif html is not None:
+            html_element = [html_module.fromstring(h) for h in get_iter(html)]
+            products = self._products_from_html_elements(html_element, region)
+        elif html_element is not None:
+            products = self._products_from_html_elements(get_iter(html_element), region)
+
         if products is not None:
-            products = get_iter(products)
-            products = [prod for prod in products if prod.is_valid() and prod._index]
-            # Deduplicate by ASIN - keep first occurrence only
-            for prod in products:
-                if prod._index not in self._indexes:
-                    self._products.append(prod)
-                    self._indexes.append(prod._index)
+            self._add_products(get_iter(products))
 
     def __repr__(self):
         out = []
-        max_index_len = 12  # ASIN is 10 chars + padding
+        max_index_len = max([len(repr(index)) + 2 for index in self._indexes] + [12])
         for index, product in self.items():
-            temp_repr = repr(index) + ':' + max_index_len*' '
-            temp_repr = temp_repr[:max_index_len] + repr(product)
+            temp_repr = (repr(index) + ':').ljust(max_index_len) + repr(product)
             temp_repr = temp_repr.replace('\n','\n' + max_index_len*' ')
 
             out.append(temp_repr)
@@ -107,7 +88,7 @@ class AmzSear(object):
 
     def _set_repr_max_len(self, val):
         """Set the maximum repr width length for all products."""
-        for product in self:
+        for product in self._products:
             if hasattr(product, 'REPR_MAX_LEN'):
                 product.REPR_MAX_LEN = val
 
@@ -171,7 +152,8 @@ class AmzSear(object):
         Returns:
             list: List of tuples containing attribute values in product order.
         """
-        if not isinstance(key, list):
+        single_key = not isinstance(key, list)
+        if single_key:
             key = [key]
 
         data = []
@@ -180,14 +162,14 @@ class AmzSear(object):
             curr_out = data[i]
 
             for index, prod in self.items():
-                if hasattr(prod, k):
-                    curr_out.append(getattr(prod, k))
-                elif raise_error:
-                    raise ValueError(f'The key {repr(k)} is not available at index {repr(index)}')
-                else:
-                    curr_out.append(default)
+                try:
+                    curr_out.append(prod.get(k, default=default, raise_error=raise_error))
+                except KeyError as exc:
+                    raise ValueError(f'The key {repr(k)} is not available at index {repr(index)}') from exc
 
-        return list(zip(*data))
+        if single_key:
+            return data[0]
+        return list(zip(*data, strict=False))
 
     def items(self):
         """
@@ -196,7 +178,7 @@ class AmzSear(object):
         Returns:
             zip: A generator yielding (ASIN, AmzProduct) tuples.
         """
-        return zip(self._indexes, self._products)
+        return zip(self._indexes, self._products, strict=False)
 
     def indexes(self):
         """
@@ -237,4 +219,32 @@ class AmzSear(object):
         return DataFrame(
             [y.to_series(recursive=recursive, flatten=flatten) for x, y in self.items()],
             index=self._indexes
-        ) 
+        )
+
+    def _products_from_urls(self, urls, region):
+        html_elements = []
+        self._urls = []
+        for raw_url in urls:
+            url = build_url(raw_url, region=region)
+            self._urls.append(url)
+            try:
+                html_elements.append(fetch_html(url))
+            except FetchError as exc:
+                self.fetch_errors.append({'url': url, 'error': str(exc)})
+        return self._products_from_html_elements(html_elements, region)
+
+    def _products_from_html_elements(self, html_elements, region):
+        products = []
+        for html_el in html_elements:
+            page_products = html_el.cssselect('div[data-asin][data-component-type="s-search-result"]')
+            page_products = [x for x in page_products if x.cssselect('h2')]
+            products.extend(AmzProduct(elem, region=region) for elem in page_products)
+        return products
+
+    def _add_products(self, products):
+        products = [prod for prod in products if prod.is_valid() and prod._index]
+        # Deduplicate by ASIN - keep first occurrence only
+        for prod in products:
+            if prod._index not in self._indexes:
+                self._products.append(prod)
+                self._indexes.append(prod._index)

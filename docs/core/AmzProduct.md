@@ -2,103 +2,82 @@
 
 <a name="AmzProduct"></a>
 
-### AmzProduct(_html_element=None_)
+### AmzProduct(_html_element=None, region='US'_)
 
-The AmzProduct class extends the [AmzBase](AmzBase.md#AmzBase) class and, as
-such the following attributes are available to be called as an index call or as
-an attribute:
+`AmzProduct` extends [AmzBase](AmzBase.md#AmzBase) and represents one Amazon
+search-result product.
 
-- _title_ (str): The name of the product.
-- _product_url_ (str) A url directly to the product's Amazon page.
-- _image_url_ (str) A url to the product's default image.
-- _rating_ ([AmzRating](AmzRating.md)) An AmzRating object.
-- _prices_ (dict) A dictionary of prices, with the price type as a key and a
-  string for the price value (see [get_prices](#get_prices) to get float
-  values).
-- _extra_attributes_ (dict) Any extra information that can be extracted from the
-  product.
-- _subtext_ (list) A list of strings under the title, typically the author's
-  name and/or the date of publication.
+Attributes:
 
-This class should usually not be instantiated directly (rather be used in an
-[AmzSear](AmzSear.md) object) but can be created by passing an HTML element to
-the constructor. If nothing is passed, an empty AmzProduct object is created.
+- _title_ (str): Product title.
+- _product_url_ (str): Canonical product page URL.
+- _image_url_ (str): Main image URL when available.
+- _rating_ ([AmzRating](AmzRating.md)): Rating object.
+- _prices_ (dict): Price label to original price text.
+- _availability_ (str): Best-effort availability phrase from search results.
+- _is_available_ (bool): `True`, `False`, or `None` when unknown.
+- _extra_attributes_ (dict): Additional card attributes.
+- _subtext_ (list): Secondary text under the title.
+- _details_ ([AmzProductDetails](AmzProductDetails.md)): Product page details
+  populated by `fetch_details()`.
+- _reviews_ ([AmzReviews](AmzReviews.md)): Review page data populated by
+  `fetch_details(level=DetailLevel.REVIEWS)`.
+- _fetch_error_ (str): Error text from failed detail/review fetches. The legacy
+  `_fetch_error` alias is still populated for compatibility.
 
-#### Optional Args
+#### Constructors
 
-_html_element_ (LXML root): A root for an HTML tree derived from an element on
-an Amazon search page.
+```python
+from amzsear import AmzProduct
+
+product = AmzProduct(html_element)
+product = AmzProduct.from_asin("B00006IFHD", region="US")
+```
+
+`from_asin()` creates a valid product shell for direct product-page fetches and
+validates that the ASIN is exactly 10 alphanumeric characters.
 
 ## Class Methods
 
-<a name="get"></a>
+<a name="get_asin"></a>
 
-### get(_key, default=None, raise_error=False_)
+### get_asin()
 
-Inherited method from [AmzBase](AmzBase.md#get).
-
-##
+Extracts the ASIN from `product_url`. Both `/dp/ASIN` and `/gp/product/ASIN`
+URLs are supported.
 
 <a name="get_prices"></a>
 
 ### get_prices(_key=None_)
 
-Gets a list of floats from the dictionary of price text. A key can be passed to
-explicitly specify the prices to select. If the key is None, all prices keys are
-used.
+Gets price values as floats. The parser accepts US and European separator
+styles, such as `$1,234.56` and `1.234,56 EUR`.
 
 #### Optional Args
 
-_key_ (str or list): A key or list of keys to in the price dictionary.
+_key_ (str or list): Price key or keys from `prices`. If omitted, all prices
+are parsed.
 
-##### Returns
+<a name="fetch_details"></a>
 
-list: List of floats for the subset of price specified.
+### fetch_details(_level=None, region=None_)
 
-##
+Fetches additional product data from Amazon and stores it on the product.
 
-<a name="is_valid"></a>
+```python
+from amzsear import DetailLevel
 
-### is_valid()
+product.fetch_details(level=DetailLevel.BASIC)
+product.fetch_details(level=DetailLevel.REVIEWS)
+```
 
-Inherited method from [AmzBase](AmzBase.md#is_valid).
+`DetailLevel.BASIC` fetches the product page and populates `details`.
+`DetailLevel.REVIEWS` also fetches the reviews page and populates `reviews`.
+Failures are stored in `fetch_error`.
 
-##
+<a name="base-methods"></a>
 
-<a name="items"></a>
+### Inherited Methods
 
-### items()
-
-Inherited method from [AmzBase](AmzBase.md#items).
-
-##
-
-<a name="keys"></a>
-
-### keys()
-
-Inherited method from [AmzBase](AmzBase.md#keys).
-
-##
-
-<a name="to_dict"></a>
-
-### to_dict(_recursive=True, flatten=False_)
-
-Inherited method from [AmzBase](AmzBase.md#).
-
-##
-
-<a name="to_series"></a>
-
-### to_series(_recursive=True, flatten=False_)
-
-Inherited method from [AmzBase](AmzBase.md#to_series).
-
-##
-
-<a name="values"></a>
-
-### values()
-
-Inherited method from [AmzBase](AmzBase.md#values).
+`get()`, `items()`, `keys()`, `values()`, `is_valid()`, `to_dict()`, and
+`to_series()` are inherited from [AmzBase](AmzBase.md).

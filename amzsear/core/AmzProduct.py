@@ -1,21 +1,18 @@
 import re
 
-try:
-    from amzsear.core.AmzBase import AmzBase
-    from amzsear.core import requires_valid_data, capture_exception, build_url, build_base_url, fetch_html, FetchError
-    from amzsear.core.AmzRating import AmzRating
-    from amzsear.core.AmzProductDetails import AmzProductDetails
-    from amzsear.core.AmzReviews import AmzReviews
-    from amzsear.core.selectors import DetailLevel
-    from amzsear.core.consts import PRODUCT_URL, REVIEWS_URL, QA_URL, DEFAULT_REGION
-except ImportError:
-    from .AmzBase import AmzBase
-    from . import requires_valid_data, capture_exception, build_url, build_base_url, fetch_html, FetchError
-    from .AmzRating import AmzRating
-    from .AmzProductDetails import AmzProductDetails
-    from .AmzReviews import AmzReviews
-    from .selectors import DetailLevel
-    from .consts import PRODUCT_URL, REVIEWS_URL, QA_URL, DEFAULT_REGION
+from . import FetchError, build_base_url, build_url, fetch_html, requires_valid_data
+from .AmzBase import AmzBase
+from .AmzProductDetails import AmzProductDetails
+from .AmzRating import AmzRating
+from .AmzReviews import AmzReviews
+from .consts import DEFAULT_REGION, PRODUCT_URL, REVIEWS_URL
+from .selectors import DetailLevel
+from .utils import (
+    clean_text,
+    extract_asin,
+    is_asin,
+    parse_price_values,
+)
 
 
 class AmzProduct(AmzBase):
@@ -58,11 +55,26 @@ class AmzProduct(AmzBase):
     subtext = None
     details = None  # AmzProductDetails object (populated by fetch_details)
     reviews = None  # AmzReviews object (populated by fetch_details)
-    _fetch_error = None  # Error message if fetch_details failed
+    fetch_error = None  # Error message if fetch_details failed
+    _fetch_error = None  # Backward-compatible alias for fetch_error
 
     _all_attrs = ['title','product_url','image_url','rating','prices',
         'availability', 'is_available',
-        'extra_attributes', 'subtext', 'details', 'reviews']
+        'extra_attributes', 'subtext', 'details', 'reviews', 'fetch_error']
+
+    @classmethod
+    def from_asin(cls, asin, region=DEFAULT_REGION):
+        """Create a valid product shell for a known ASIN."""
+        raw_asin = asin
+        asin = extract_asin(asin)
+        if not asin:
+            raise ValueError(f'{raw_asin!r} is not a valid ASIN')
+        product = cls()
+        product._region = region
+        product.product_url = PRODUCT_URL % (build_base_url(region), asin)
+        product._index = asin
+        product._is_valid = True
+        return product
 
     def __init__(self, html_element=None, region=DEFAULT_REGION):
         super().__init__()
@@ -71,12 +83,11 @@ class AmzProduct(AmzBase):
             html_dict = self._get_from_html(html_element)
             for k, v in html_dict.items():
                 setattr(self, k, v)
-            if len(html_dict) > 0:
+            if self.title and self.get_asin():
                 self._is_valid = True
                 # Set _index to ASIN for use as key in AmzSear collection
                 self._index = self.get_asin()
 
-    @capture_exception(IndexError, default={})
     def _get_from_html(self, root):
         """
         Parse product data from HTML element.
@@ -86,30 +97,41 @@ class AmzProduct(AmzBase):
         """
         d = {}
 
-        title_root = [x for x in root.cssselect('a') if len(x.cssselect('h2')) > 0][0]
-        d['title'] = ''.join([x.text_content() for x in title_root.cssselect('h2')])
-        d['product_url'] = build_url(title_root.get('href'), region=self._region)
-        for elem in title_root.getparent().getparent().cssselect('div[class="a-row a-spacing-none"]'):
-            temp_subtext = ''.join([x.text_content() for x in elem.cssselect('span[class*="a-size-small"]')])
-            if len(temp_subtext) > 0:
-                d['subtext'] = d.get('subtext',[]) + [temp_subtext]
+        title_elem = self._first(root.cssselect('h2'))
+        title_link = self._title_link(root, title_elem)
+        if title_elem is not None:
+            d['title'] = clean_text(title_elem.text_content())
 
+        asin = root.get('data-asin')
+        if asin and is_asin(asin):
+            d['_index'] = asin.upper()
 
-        d['image_url'] = root.cssselect('img[src]')[0].get('src')
-        d['rating'] = AmzRating(root) or None
+        if title_link is not None and title_link.get('href'):
+            try:
+                d['product_url'] = build_url(title_link.get('href'), region=self._region)
+            except ValueError:
+                pass
+        if 'product_url' not in d and d.get('_index'):
+            d['product_url'] = PRODUCT_URL % (build_base_url(self._region), d['_index'])
 
-        d['prices'] = {}
-        price_names = root.cssselect('h3[data-attribute]')
-        price_text = root.cssselect('span[class^="a"]')
-        price_text = filter(lambda x: re.match(r'^[^a-z\-]+$', str(x.text)) and
-            re.search(r'[.,]', str(x.text)) and re.search(r'\d', str(x.text)), price_text)
+        if 'product_url' in d and '_index' not in d:
+            asin = extract_asin(d['product_url'])
+            if asin:
+                d['_index'] = asin
 
-        for i, el in enumerate(price_text):
-            if i >= len(price_names):
-                price_key = str(len(d['prices']))  # defaults to a number if no name for price type
-            else:
-                price_key = price_names[i].text
-            d['prices'][price_key] = el.text
+        d['subtext'] = self._parse_subtext(root)
+        if not d['subtext']:
+            d.pop('subtext')
+
+        image_url = self._parse_image_url(root)
+        if image_url:
+            d['image_url'] = image_url
+
+        rating = AmzRating(root)
+        if rating:
+            d['rating'] = rating
+
+        d['prices'] = self._parse_prices(root)
 
         availability, is_available = self._get_availability_from_html(root, d['prices'])
         if availability is not None:
@@ -117,15 +139,87 @@ class AmzProduct(AmzBase):
         if is_available is not None:
             d['is_available'] = is_available
 
-        extras = root.cssselect('div[class="a-fixed-left-grid-inner"] > div > span')
-        extras = [re.sub(r'\s+', ' ', x.text_content().strip()) for x in extras]
-        d['extra_attributes'] = dict(list(zip(extras,extras[1:]))[::2])
-
-        # _index is the ASIN, used as key in AmzSear collection
-        d['_index'] = None  # Will be set from product_url after extraction
+        d['extra_attributes'] = self._parse_extra_attributes(root)
 
         # clean up before returning
-        return dict(map(lambda k: (k, d[k].strip() if isinstance(d[k],str) else d[k]), d)) 
+        return dict(map(lambda k: (k, clean_text(d[k]) if isinstance(d[k],str) else d[k]), d))
+
+    def _first(self, values):
+        return values[0] if values else None
+
+    def _title_link(self, root, title_elem):
+        if title_elem is not None:
+            elem = title_elem
+            while elem is not None:
+                if elem.tag == 'a' and elem.get('href'):
+                    return elem
+                elem = elem.getparent()
+            child_links = title_elem.cssselect('a[href]')
+            if child_links:
+                return child_links[0]
+
+        product_links = [
+            link for link in root.cssselect('a[href]')
+            if extract_asin(link.get('href'))
+        ]
+        return self._first(product_links)
+
+    def _parse_subtext(self, root):
+        subtext = []
+        title_elem = self._first(root.cssselect('h2'))
+        title_text = clean_text(title_elem.text_content()) if title_elem is not None else ''
+        for elem in root.cssselect('.a-row.a-size-base.a-color-secondary, .a-row.a-size-base, .a-row.a-spacing-none'):
+            text = clean_text(elem.text_content())
+            if text and text != title_text:
+                subtext.append(text)
+        return list(dict.fromkeys(subtext))
+
+    def _parse_image_url(self, root):
+        for img in root.cssselect('img[src], img[data-src], img[data-old-hires]'):
+            src = img.get('src') or img.get('data-src') or img.get('data-old-hires')
+            if src and 'sprite' not in src.lower() and 'transparent' not in src.lower():
+                return src
+        return None
+
+    def _parse_prices(self, root):
+        prices = {}
+        price_names = [clean_text(elem.text_content()) for elem in root.cssselect('h3[data-attribute]')]
+        candidates = []
+        selectors = [
+            '.a-price .a-offscreen',
+            '.a-price-whole',
+            '.a-color-price',
+            '[aria-label*="$"]',
+            '[aria-label*="€"]',
+            '[aria-label*="£"]',
+            '[aria-label*="¥"]',
+            '[aria-label*="₹"]',
+        ]
+        for selector in selectors:
+            for elem in root.cssselect(selector):
+                text = clean_text(elem.get('aria-label') or elem.text_content())
+                if text and parse_price_values(text):
+                    candidates.append(text)
+
+        for i, text in enumerate(dict.fromkeys(candidates)):
+            if i < len(price_names) and price_names[i]:
+                key = price_names[i]
+            else:
+                key = 'price' if i == 0 else f'price_{i + 1}'
+            prices[key] = text
+        return prices
+
+    def _parse_extra_attributes(self, root):
+        extras = {}
+        spans = root.cssselect('div[class="a-fixed-left-grid-inner"] > div > span')
+        values = [clean_text(x.text_content()) for x in spans]
+        values = [value for value in values if value]
+        for i in range(0, len(values) - 1, 2):
+            key = values[i]
+            value = values[i + 1]
+            if key and value and key != value:
+                extras[key] = value
+        return extras
 
     def _get_availability_from_html(self, root, prices=None):
         """
@@ -134,7 +228,7 @@ class AmzProduct(AmzBase):
         Amazon search cards do not expose a dedicated stock field. Only
         explicit out-of-stock or in-stock phrases are treated as known.
         """
-        text = re.sub(r'\s+', ' ', root.text_content()).strip()
+        text = clean_text(root.text_content())
 
         unavailable_patterns = [
             r'\bcurrently unavailable\b',
@@ -195,9 +289,9 @@ class AmzProduct(AmzBase):
         for k in keys:
             if k not in self.prices:
                 raise KeyError(k)
-            prices += [re.sub(',', '', x) for x in re.findall(r'[\d.,]+', self.prices[k])]
+            prices.extend(parse_price_values(self.prices[k]))
 
-        return sorted(map(float, prices))
+        return sorted(prices)
         
     def get_asin(self):
         """
@@ -208,10 +302,7 @@ class AmzProduct(AmzBase):
         """
         if not self.product_url:
             return None
-        result = re.search(r'(?:/|%2F)dp(?:/|%2F)([A-Z0-9]{10})', self.product_url)
-        if result is not None:
-            result = result.group(1)
-        return result
+        return extract_asin(self.product_url)
 
     def fetch_details(self, level=None, region=None):
         """
@@ -225,7 +316,6 @@ class AmzProduct(AmzBase):
                 - DetailLevel.SEARCH (0): No request, use existing data
                 - DetailLevel.BASIC (1): Fetch product page (title, brand, specs, etc.)
                 - DetailLevel.REVIEWS (2): Also fetch reviews page
-                - DetailLevel.FULL (3): Also fetch Q&A page
             region: Amazon region code (e.g., 'US', 'UK', 'DE'). Defaults to US.
 
         Returns:
@@ -244,6 +334,7 @@ class AmzProduct(AmzBase):
 
         asin = self.get_asin()
         if not asin:
+            self._set_fetch_error('Cannot fetch details without a valid ASIN')
             return self
 
         base_url = build_base_url(self._region)
@@ -255,7 +346,7 @@ class AmzProduct(AmzBase):
                 html_elem = fetch_html(product_url)
                 self.details = AmzProductDetails(html_elem)
             except FetchError as e:
-                self._fetch_error = str(e)
+                self._set_fetch_error(str(e))
                 return self
 
         # Level 2: Fetch reviews page
@@ -265,11 +356,10 @@ class AmzProduct(AmzBase):
                 html_elem = fetch_html(reviews_url)
                 self.reviews = AmzReviews(html_elem)
             except FetchError as e:
-                self._fetch_error = str(e)
-
-        # Level 3: Q&A would be fetched here (not implemented yet)
-        # if level.value >= DetailLevel.FULL.value:
-        #     qa_url = QA_URL % (base_url, asin)
-        #     ...
+                self._set_fetch_error(str(e))
 
         return self
+
+    def _set_fetch_error(self, message):
+        self.fetch_error = message
+        self._fetch_error = message

@@ -8,7 +8,7 @@ The AmzRating class extends the [AmzBase](AmzBase.md#AmzBase) class and, as such
 the following attributes are available to be called as an index call or as an
 attribute:
 
-- _ratings_text_ (str): The star rating (e.g. "4.5/5").
+- _ratings_text_ (str): The star rating text (e.g. "4.5 out of 5 stars").
 - _ratings_count_text_ (str): The number of votes (e.g. "100").
 
 This class should usually not be instantiated directly (rather be used as part
@@ -35,7 +35,8 @@ Inherited method from [AmzBase](AmzBase.md#get).
 
 ### get_count()
 
-Gets the total number of ratings.
+Gets the total number of ratings. US and European thousands separators are
+supported.
 
 #### Returns
 

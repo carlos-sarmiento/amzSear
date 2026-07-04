@@ -17,14 +17,19 @@ classifiers = [
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 requires-python = ">=3.10"
 dependencies = [
     "lxml>=4.9.1",
     "cssselect>=1.1.0",
-    "lxml_html_clean>=0.1.0",
     "requests>=2.20.0",
     "mcp[cli]>=1.27.1",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.12.0",
 ]
 
 [project.urls]
@@ -48,3 +53,11 @@ include = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["amzsear"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]

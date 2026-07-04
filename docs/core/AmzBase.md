@@ -4,7 +4,7 @@
 
 ### AmzBase(_key1=value1, key2=value2, ..._)
 
-The AmzBase class can be works similarly to the 'dict' class in Python. However,
+The AmzBase class works similarly to the 'dict' class in Python. However,
 keys for the class are predefined when in the subclass that inherits AmzBase and
 there is also the potential for validity/invalidity to be defined in the object.
 The keys can also be indexed (as they would be for a dict) but can also be
@@ -104,8 +104,8 @@ cls.to_dict(recursive=False, flatten=False).
 _recursive_ (bool): If true any values with a to_dict method will have their
 method called too, otherwise the value will be the object.  
 _flatten_ (bool): If true recursive calls to to_dict will cause the values to be
-merged at the top level. Note that recursive must be True for this to have an
-effect.
+merged at the top level. `recursive=True` is required. If a nested key collides
+with an existing key, the nested key is prefixed with the parent attribute name.
 
 ##### Returns
 

@@ -6,8 +6,11 @@ it's methods and parameters. The following classes are available:
 
 - [AmzSear](AmzSear.md)
 - [AmzProduct](AmzProduct.md)
+- [AmzProductDetails](AmzProductDetails.md)
+- [AmzReviews and AmzReview](AmzReviews.md)
 - [AmzRating](AmzRating.md)
 - [AmzBase](AmzBase.md)
+- [DetailLevel](DetailLevel.md)
 
 The standard usage of the core API is as follows:
 

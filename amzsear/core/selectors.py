@@ -13,7 +13,6 @@ class DetailLevel(Enum):
     SEARCH = 0      # No extra request (current behavior from search results)
     BASIC = 1       # Product page details (1 request)
     REVIEWS = 2     # + Reviews page (1 additional request)
-    FULL = 3        # + Q&A page (1 additional request)
 
 
 # Product detail page selectors
@@ -43,6 +42,7 @@ TOP_REVIEWS = '[data-hook="review"]'
 
 # Reviews page selectors
 REVIEW_ITEM = '[data-hook="review"]'
+REVIEWS_TOTAL_COUNT = '[data-hook="cr-filter-info-review-count"], #filter-info-section'
 REVIEW_TITLE = '[data-hook="review-title"]'
 REVIEW_RATING = '[data-hook="review-star-rating"]'
 REVIEW_DATE = '[data-hook="review-date"]'
@@ -51,8 +51,3 @@ REVIEW_AUTHOR = '.a-profile-name'
 REVIEW_VERIFIED = '[data-hook="avp-badge"]'
 REVIEW_HELPFUL = '[data-hook="helpful-vote-statement"]'
 REVIEW_IMAGES = '[data-hook="review-image-tile"]'
-
-# Q&A page selectors
-QA_QUESTION = '.a-fixed-left-grid'
-QA_QUESTION_TEXT = '.a-declarative'
-QA_ANSWER = '.a-spacing-base'

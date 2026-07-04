@@ -1,14 +1,12 @@
 ## CLI
 
 The amzSear CLI is the main entry point for using the amzSear package. It is
-similar to the [original version](../../legacy/v1) and backwards has been
-maintained where possible. However some features had to be changed consequently
-some CLI commands had to be changed, as discussed
-[below](#comparison-to-version-1).
+compatible with the current v3 API. Search results are keyed by ASIN, and the
+CLI can also fetch a product directly by ASIN.
 
-The CLI, in it's basic form can still be used in the following way:
+The CLI, in its basic form, can be used in the following way:
 
-```
+```text
 $ amzsear 'Harry Potter Books'
 ```
 
@@ -16,13 +14,12 @@ $ amzsear 'Harry Potter Books'
 
 ### Usage
 
-The extended amzSear usage can be seen by typing `amzsear` without any
-additional arguments.
+The extended amzSear usage can be seen by typing `amzsear --help`.
 
-```
+```text
 usage: amzsear [-h] [-a ASIN] [-p PAGE] [-s SELECT]
                [-r {AU,AE,BR,CA,CN,DE,ES,FR,IN,IT,JP,MX,NL,SG,UK,US}] [-b]
-               [-v] [-j]
+               [-v] [-j] [-V]
                [query]
 ```
 
@@ -33,15 +30,18 @@ _query_: The query string to search Amazon.
 ##### Optional Args
 
 _-h, --help_: Display extended help & usage information. _-a ASIN, --asin ASIN_:
-Fetch product details by ASIN instead of searching. _-p NUM, --page NUM_: The
-page number to be searched (defaults to 1). _-s SELECT, --select SELECT_: Select
-result by ASIN or numeric index (0-based position). If no selection is
-specified, the entire page's products will be displayed. _-r STR, --region STR_:
-The amazon country/region to be searched (defaults to US). For a list of
+Fetch product details by ASIN instead of searching. Cannot be combined with a
+query, `--page`, or `--select`. _-p PAGE, --page PAGE_: The positive page number
+to be searched (defaults to 1). _-s SELECT, --select SELECT_: Select result by
+ASIN or numeric index (0-based position). All-numeric 10-character ASINs are
+treated as ASINs, not positions. If no selection is specified, the entire page's
+products will be displayed. _-r STR, --region STR_: The amazon country/region
+to be searched (defaults to US). Region input is case-insensitive. For a list of
 countries to country code see the [region table](../regions.md). _-b,
---browser_: Open the product page in the default browser. _-v, --verbose_: Show
-full product details instead of summary. _-j, --json_: Output in JSON format.
-Can be combined with -v for verbose JSON.
+--browser_: Open result product pages in the default browser. _-v, --verbose_:
+Show full product details instead of summary. _-j, --json_: Output in JSON
+format. Can be combined with -v for verbose JSON. _-V, --version_: Show version
+number and exit.
 
 <a name="examples"></a>
 
@@ -49,7 +49,7 @@ Can be combined with -v for verbose JSON.
 
 ###### Example 1
 
-```
+```text
 $ amzsear 'Harry Potter' -p 1
 
 	OR
@@ -63,7 +63,7 @@ as the default page number is 1.
 
 ###### Example 2
 
-```
+```text
 $ amzsear 'Harry Potter' -s 0
 
 	OR
@@ -76,20 +76,20 @@ B00728DYLA. The `-s` flag accepts both numeric index (0-based) and ASIN.
 
 ###### Example 3
 
-```
+```text
 $ amzsear 'Harry Potter' -r ES
 
 	OR
-    
+
 $ amzsear 'Harry Potter' --region ES
 ```
 
-Example 3 will display all results from the `Harry Potter` searching the Spanish
-Amazon website.
+Example 3 will display all results for `Harry Potter` from the Spanish Amazon
+website.
 
 ###### Example 4
 
-```
+```text
 $ amzsear 'Harry Potter' -b
 
 	OR
@@ -102,7 +102,7 @@ default browser. By default, the browser is not opened.
 
 ###### Example 5
 
-```
+```text
 $ amzsear 'Harry Potter' -p 2 -s B00728DYLA -j
 ```
 
@@ -111,7 +111,7 @@ displayed.
 
 ###### Example 6
 
-```
+```text
 $ amzsear -a B00006IFHD
 ```
 

@@ -5,6 +5,9 @@ from mcp.shared.memory import create_connected_server_and_client_session
 from amzsear.mcp.server import (
     build_product_url_impl,
     create_app,
+    details_level,
+    normalize_pages,
+    parse_product_details_html_impl,
     parse_search_html_impl,
     transport_security,
 )
@@ -37,7 +40,25 @@ class McpToolImplementationTest(unittest.TestCase):
 
         self.assertTrue(settings.enable_dns_rebinding_protection)
         self.assertIn("127.0.0.1:*", settings.allowed_hosts)
+        self.assertIn("[::1]:*", settings.allowed_hosts)
         self.assertIn("http://127.0.0.1:*", settings.allowed_origins)
+
+    def test_invalid_asin_rejected(self):
+        with self.assertRaises(ValueError):
+            build_product_url_impl("not-an-asin")
+
+    def test_page_list_is_capped_and_deduplicated(self):
+        self.assertEqual(normalize_pages([1, 1, 2]), [1, 2])
+        with self.assertRaises(ValueError):
+            normalize_pages([1, 2, 3, 4, 5, 6])
+
+    def test_detail_level_rejects_unimplemented_full_level(self):
+        with self.assertRaises(ValueError):
+            details_level("FULL")
+
+    def test_parse_html_rejects_empty_input(self):
+        with self.assertRaises(ValueError):
+            parse_product_details_html_impl("")
 
 
 class FastMcpServerTest(unittest.IsolatedAsyncioTestCase):

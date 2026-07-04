@@ -1,12 +1,9 @@
-try:
-    from amzsear.core.consts import REPR_MAX_LEN_DEFAULT
-    from amzsear.core import requires_valid_data
-except ImportError:
-    from .consts import REPR_MAX_LEN_DEFAULT
-    from . import requires_valid_data
+from . import requires_valid_data
+from .consts import REPR_MAX_LEN_DEFAULT
+from .utils import clean_text
 
 
-class AmzBase(object):
+class AmzBase:
     """
     The AmzBase class works similarly to the 'dict' class in Python.
     However, keys for the class are predefined in the subclass that
@@ -25,7 +22,7 @@ class AmzBase(object):
 
     def __init__(self, **kws):
         # Initialize instance-level attributes
-        self._is_valid = False
+        self._is_valid = bool(kws)
         # Create instance copy of _all_attrs if subclass defines it as class attr
         if '_all_attrs' not in self.__dict__:
             self._all_attrs = list(self.__class__._all_attrs)
@@ -44,9 +41,11 @@ class AmzBase(object):
         return self.is_valid()
 
     def __contains__(self,it):
-        return it in list(self)
+        return it in self._all_attrs and getattr(self, it, None) is not None and self.is_valid()
 
     def __iter__(self):
+        if not self.is_valid():
+            return
         for attr_name in self._all_attrs:
             if getattr(self, attr_name, None) is not None:
                 yield attr_name
@@ -56,11 +55,11 @@ class AmzBase(object):
             out = []
 
             if len(self) > 0:
-                max_k = len(max(self._all_attrs, key=lambda x: len(x)))
-                str_format = '{:%d}    {}' % (max_k)
+                max_k = len(max(list(self), key=lambda x: len(x)))
+                str_format = f'{{:{max_k}}}    {{}}'
                 for key, value in self.items():
                     #indent newlines (these will usually be for an instance of a class inheriting AmzBase)
-                    value = repr(value).replace('\n','\n' + ' '*(max_k + 4)) #length of space
+                    value = clean_text(repr(value)).replace('\n','\n' + ' '*(max_k + 4)) #length of space
                     out.append(str_format.format(key, value)) 
 
             #add validity & class to the end
@@ -68,7 +67,10 @@ class AmzBase(object):
             return '\n'.join(out)
 
         lines = get_repr().split('\n') 
-        out_lines = [l if len(l) <= self.REPR_MAX_LEN else l[:(self.REPR_MAX_LEN-3)] + '...' for l in lines]
+        out_lines = [
+            line if len(line) <= self.REPR_MAX_LEN else line[:(self.REPR_MAX_LEN-3)] + '...'
+            for line in lines
+        ]
         return '\n'.join(out_lines)
 
     def get(self, key, default=None, raise_error=False):
@@ -86,11 +88,15 @@ class AmzBase(object):
         Returns:
             The value of the key or the default value if an error is not raised.
         """
-        if key not in self:
+        if key not in self._all_attrs:
             if raise_error:
                 raise KeyError(f'The key {repr(key)} is not a known attribute')
             else:
                 return default
+        if not self.is_valid() or getattr(self, key, None) is None:
+            if raise_error:
+                raise KeyError(f'The key {repr(key)} is known but has no parsed value')
+            return default
 
         return getattr(self, key)
 
@@ -155,10 +161,16 @@ class AmzBase(object):
             dict: A dict with attribute names as keys and their values as values.
         """
         d = {}
+        if flatten and not recursive:
+            raise ValueError('flatten=True requires recursive=True')
         for k, v in self.items():
             if recursive and hasattr(v, 'to_dict'):
                 if flatten:
-                    d = {**d, **v.to_dict()}
+                    for nested_key, nested_value in v.to_dict().items():
+                        target_key = nested_key
+                        if target_key in d:
+                            target_key = f'{k}_{nested_key}'
+                        d[target_key] = nested_value
                 else:
                     d[k] = v.to_dict()
             else:

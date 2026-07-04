@@ -4,10 +4,8 @@ fetched from Amazon product review pages.
 """
 import re
 
-try:
-    from amzsear.core.AmzBase import AmzBase
-except ImportError:
-    from .AmzBase import AmzBase
+from .AmzBase import AmzBase
+from .utils import clean_text, extract_numbers, parse_int
 
 
 class AmzReview(AmzBase):
@@ -57,45 +55,43 @@ class AmzReview(AmzBase):
         Args:
             elem: lxml HTML element for a single review
         """
-        try:
-            from amzsear.core.selectors import (
-                REVIEW_TITLE, REVIEW_RATING, REVIEW_DATE,
-                REVIEW_BODY, REVIEW_AUTHOR, REVIEW_VERIFIED,
-                REVIEW_HELPFUL, REVIEW_IMAGES
-            )
-        except ImportError:
-            from .selectors import (
-                REVIEW_TITLE, REVIEW_RATING, REVIEW_DATE,
-                REVIEW_BODY, REVIEW_AUTHOR, REVIEW_VERIFIED,
-                REVIEW_HELPFUL, REVIEW_IMAGES
-            )
+        from .selectors import (
+            REVIEW_AUTHOR,
+            REVIEW_BODY,
+            REVIEW_DATE,
+            REVIEW_HELPFUL,
+            REVIEW_IMAGES,
+            REVIEW_RATING,
+            REVIEW_TITLE,
+            REVIEW_VERIFIED,
+        )
 
         # Reviewer name
         author_elem = elem.cssselect(REVIEW_AUTHOR)
         if author_elem:
-            self.reviewer = author_elem[0].text_content().strip()
+            self.reviewer = clean_text(author_elem[0].text_content())
 
         # Rating
         rating_elem = elem.cssselect(REVIEW_RATING)
         if rating_elem:
             rating_text = rating_elem[0].text_content()
-            match = re.search(r'(\d+\.?\d*)\s*out\s*of\s*5', rating_text)
-            if match:
-                self.rating = float(match.group(1))
+            values = extract_numbers(rating_text)
+            if len(values) >= 2 and int(values[-1]) == 5:
+                self.rating = values[0]
 
         # Title
         title_elem = elem.cssselect(REVIEW_TITLE)
         if title_elem:
             # Title often includes rating text, extract just the title
-            title_text = title_elem[0].text_content().strip()
+            title_text = clean_text(title_elem[0].text_content())
             # Remove rating prefix like "5.0 out of 5 stars"
-            title_text = re.sub(r'^\d+\.?\d*\s*out\s*of\s*5\s*stars?\s*', '', title_text)
-            self.title = title_text.strip()
+            title_text = re.sub(r'^\d+[.,]?\d*\s*\S*\s*5\s*\S*\s*', '', title_text)
+            self.title = clean_text(title_text)
 
         # Date
         date_elem = elem.cssselect(REVIEW_DATE)
         if date_elem:
-            date_text = date_elem[0].text_content().strip()
+            date_text = clean_text(date_elem[0].text_content())
             # Extract date from text like "Reviewed in the United States on December 3, 2024"
             match = re.search(r'on\s+(.+)$', date_text)
             if match:
@@ -106,25 +102,21 @@ class AmzReview(AmzBase):
         # Review text
         body_elem = elem.cssselect(REVIEW_BODY)
         if body_elem:
-            self.text = body_elem[0].text_content().strip()
+            self.text = clean_text(body_elem[0].text_content())
 
         # Verified purchase
         verified_elem = elem.cssselect(REVIEW_VERIFIED)
-        self.verified = len(verified_elem) > 0
+        self.verified = True if verified_elem else None
 
         # Helpful count
         helpful_elem = elem.cssselect(REVIEW_HELPFUL)
         if helpful_elem:
-            helpful_text = helpful_elem[0].text_content()
-            match = re.search(r'([\d,]+)\s*people?\s*found', helpful_text)
-            if match:
-                self.helpful_count = int(match.group(1).replace(',', ''))
-            elif 'One person' in helpful_text:
+            helpful_text = clean_text(helpful_elem[0].text_content())
+            parsed = parse_int(helpful_text)
+            if parsed is not None:
+                self.helpful_count = parsed
+            elif re.search(r'\bone\b', helpful_text, flags=re.IGNORECASE):
                 self.helpful_count = 1
-            else:
-                self.helpful_count = 0
-        else:
-            self.helpful_count = 0
 
         # Review images
         img_elems = elem.cssselect(REVIEW_IMAGES)
@@ -155,8 +147,9 @@ class AmzReviews(AmzBase):
     reviews = None
     total_count = None
     feature_ratings = None
+    fetch_error = None
 
-    _all_attrs = ['reviews', 'total_count', 'feature_ratings']
+    _all_attrs = ['reviews', 'total_count', 'feature_ratings', 'fetch_error']
 
     def __init__(self, html_element=None):
         """
@@ -176,10 +169,13 @@ class AmzReviews(AmzBase):
         Args:
             root: lxml HTML root element from reviews page
         """
-        try:
-            from amzsear.core.selectors import REVIEW_ITEM, REVIEW_COUNT
-        except ImportError:
-            from .selectors import REVIEW_ITEM, REVIEW_COUNT
+        from .selectors import REVIEW_COUNT, REVIEW_ITEM, REVIEWS_TOTAL_COUNT
+
+        page_text = clean_text(root.text_content()).lower()
+        if '/ap/signin' in page_text or ('sign in' in page_text and 'customer reviews' in page_text):
+            self.fetch_error = 'Amazon returned a sign-in page instead of reviews'
+            self._is_valid = True
+            return
 
         # Parse individual reviews
         review_elems = root.cssselect(REVIEW_ITEM)
@@ -194,12 +190,9 @@ class AmzReviews(AmzBase):
             self.reviews = []
 
         # Total count
-        count_elem = root.cssselect(REVIEW_COUNT)
+        count_elem = root.cssselect(REVIEWS_TOTAL_COUNT) or root.cssselect(REVIEW_COUNT)
         if count_elem:
-            count_text = count_elem[0].text_content()
-            match = re.search(r'[\d,]+', count_text)
-            if match:
-                self.total_count = int(match.group().replace(',', ''))
+            self.total_count = parse_int(count_elem[0].text_content())
 
         # Feature ratings (these are often in a separate widget)
         # Look for feature rating buttons
@@ -207,7 +200,7 @@ class AmzReviews(AmzBase):
         if feature_buttons:
             self.feature_ratings = {}
             for btn in feature_buttons:
-                text = btn.text_content()
+                text = clean_text(btn.text_content())
                 # Extract feature and count, e.g., "Sound quality (2K)"
                 match = re.match(r'([^(]+)\s*\(([^)]+)\)', text)
                 if match:
@@ -218,8 +211,8 @@ class AmzReviews(AmzBase):
         if not self.feature_ratings:
             self.feature_ratings = None
 
-        # Mark as valid if we have reviews
-        if self.reviews:
+        # Mark as valid if we parsed review data.
+        if self.reviews or self.total_count is not None or self.feature_ratings:
             self._is_valid = True
 
     def __len__(self):
